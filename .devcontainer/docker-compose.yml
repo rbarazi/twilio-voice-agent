@@ -1,0 +1,19 @@
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm
+    volumes:
+      - ..:/workspaces/twilio-voice-agent:cached
+      - ~/.gitconfig:/home/node/.gitconfig:cached
+    command: sleep infinity
+    ports:
+      - "3000:3000"
+      - "5050:5050"
+    env_file:
+      - ../.env
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    env_file:
+      - .cloudflared.env
+    command: ["tunnel", "--no-autoupdate", "run"]

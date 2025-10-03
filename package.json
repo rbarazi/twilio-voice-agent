@@ -1,0 +1,49 @@
+{
+  "name": "twilio-voice-agent",
+  "version": "1.0.0",
+  "description": "AI-powered voice agent system using Twilio and OpenAI Realtime API",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run ui:dev\" \"npm run server:dev\"",
+    "ui:dev": "next dev",
+    "server:dev": "bash scripts/run-server-dev.sh",
+    "ui:build": "next build",
+    "ui:start": "next start",
+    "server:start": "bash scripts/run-server-start.sh",
+    "build": "npm run ui:build",
+    "start": "concurrently \"npm run ui:start\" \"npm run server:start\"",
+    "call": "bash scripts/call.sh",
+    "call:reminder": "bash scripts/call-reminder.sh",
+    "call:survey": "bash scripts/call-survey.sh"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/websocket": "^11.2.0",
+    "@openai/agents": "^0.0.5",
+    "@openai/agents-extensions": "^0.1.5",
+    "concurrently": "^9.2.1",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.6.1",
+    "next": "^15.3.1",
+    "openai": "^4.77.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.20.6",
+    "twilio": "^5.10.2",
+    "uuid": "^11.0.4",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv-cli": "^10.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
