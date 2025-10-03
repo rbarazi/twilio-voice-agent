@@ -5,10 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"npm run ui:dev\" \"npm run server:dev\"",
-    "ui:dev": "next dev",
+    "ui:dev": "cd ui && next dev",
     "server:dev": "bash scripts/run-server-dev.sh",
-    "ui:build": "next build",
-    "ui:start": "next start",
+    "ui:build": "cd ui && next build",
+    "ui:start": "cd ui && next start",
     "server:start": "bash scripts/run-server-start.sh",
     "build": "npm run ui:build",
     "start": "concurrently \"npm run ui:start\" \"npm run server:start\"",
