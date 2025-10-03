@@ -5,7 +5,11 @@
   "workspaceFolder": "/workspaces/twilio-voice-agent",
 
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/rbarazi/devcontainer-features/ai-npm-packages:1": {
+      "packages": "@anthropic-ai/claude-code @openai/codex"
+    }
   },
 
   "customizations": {
