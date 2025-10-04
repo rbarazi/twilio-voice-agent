@@ -60,3 +60,33 @@ export async function endCall(callSid: string) {
     throw error;
   }
 }
+
+export async function sendDTMF(callSid: string, digits: string) {
+  try {
+    const client = getTwilioClient();
+    const publicDomain = process.env.PUBLIC_DOMAIN;
+    const protocol = publicDomain?.includes('localhost') ? 'ws' : 'wss';
+    const streamUrl = `${protocol}://${publicDomain}/twilio/media-stream`;
+
+    // Hybrid approach: Send DTMF then redirect back to Media Stream
+    // This temporarily interrupts the Media Stream but allows DTMF to be sent
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Play digits="${digits}"/>
+    <Pause length="1"/>
+    <Connect>
+        <Stream url="${streamUrl}"/>
+    </Connect>
+</Response>`;
+
+    const result = await client.calls(callSid).update({
+      twiml: twiml
+    });
+
+    logger.info('DTMF sent with reconnect', { callSid, digits });
+    return result;
+  } catch (error) {
+    logger.error('Failed to send DTMF', { callSid, digits, error });
+    throw error;
+  }
+}

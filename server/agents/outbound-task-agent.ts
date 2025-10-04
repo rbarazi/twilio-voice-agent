@@ -2,6 +2,28 @@ import { RealtimeAgent, tool } from '@openai/agents/realtime';
 import { OutboundTask, AgentConfig } from '../types/index.js';
 import { z } from 'zod';
 
+// Tool to send DTMF digits for IVR navigation
+const sendDTMFTool = tool({
+  name: 'send_dtmf',
+  description: 'Send DTMF digit(s) to navigate IVR phone menus. Use when the system asks you to press a number.',
+  parameters: z.object({
+    digits: z.string()
+      .regex(/^[0-9*#]+$/)
+      .describe('Digits to send (0-9, *, #). Example: "1" or "123"'),
+    reason: z.string()
+      .describe('Why you are sending these digits. Example: "Selecting specialized services menu"'),
+  }),
+  execute: async ({ digits, reason }) => {
+    // This will be intercepted in the session event handler
+    return {
+      success: true,
+      digits,
+      reason,
+      message: `Sent DTMF: ${digits}`
+    };
+  },
+});
+
 // Tool to end the call
 const endCallTool = tool({
   name: 'end_call',
@@ -22,7 +44,7 @@ export function createOutboundTaskAgent(task: OutboundTask, config?: AgentConfig
     name: 'outbound-task-agent',
     voice: config?.voice || (task.type === 'custom' ? 'verse' : 'sage'),
     instructions,
-    tools: [endCallTool],
+    tools: [sendDTMFTool, endCallTool],
     handoffs: [],
   });
 }
@@ -43,6 +65,10 @@ ${JSON.stringify(task.context || {}, null, 2)}
 - Confirm understanding before ending the call
 - If the person wants to speak to a human, apologize and say you'll have someone call back
 - Keep the call under 2 minutes unless the conversation naturally extends
+- When an IVR system asks you to press a number, USE the send_dtmf tool immediately
+- Example: "Press 1 for English" → call send_dtmf with digits: "1"
+- Do NOT just say "I'll press 1" - you MUST actually call the send_dtmf tool
+- After sending DTMF, wait 2-3 seconds for the system to respond
 
 # Call Structure
 1. Greeting: "Hello, this is an AI assistant calling on behalf of the company."
