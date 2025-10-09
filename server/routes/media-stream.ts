@@ -50,6 +50,11 @@ export async function mediaStreamRoutes(fastify: FastifyInstance) {
     let pendingEndCall: { callSid: string; reason: string } | null = null; // Track pending end_call request
     let lastAudioTranscriptTime: number | null = null; // Track last audio completion time
 
+    // Interruption handling state
+    let latestMediaTimestamp: number = 0; // Current position in Twilio stream (ms)
+    let responseStartTimestampTwilio: number | null = null; // When AI started speaking (ms)
+    let lastAssistantItem: string | null = null; // Current response item_id from OpenAI
+
     // Peek at first message to get call metadata
     const firstMessageHandler = async (message: Buffer) => {
       try {
@@ -235,21 +240,85 @@ Continue the conversation naturally from where it left off. You were in the midd
               if (event.type === 'input_audio_buffer.speech_started') {
                 logger.info('🎤 User started speaking (potential interruption)', { callSid });
 
-                // Cancel any ongoing AI response to allow for natural conversation flow
-                try {
-                  session?.cancelResponse();
-                  logger.info('🚫 Cancelled AI response due to user interruption', { callSid });
+                // Only handle interruption if AI was actually speaking
+                if (responseStartTimestampTwilio != null && lastAssistantItem) {
+                  // Calculate how much audio the user heard
+                  const elapsedTime = latestMediaTimestamp - responseStartTimestampTwilio;
 
+                  logger.info('🔪 Truncating AI response', {
+                    callSid,
+                    item_id: lastAssistantItem,
+                    audio_heard_ms: elapsedTime,
+                    start_timestamp: responseStartTimestampTwilio,
+                    current_timestamp: latestMediaTimestamp
+                  });
+
+                  // Send truncate event to OpenAI to update conversation history
+                  try {
+                    const truncateEvent = {
+                      type: 'conversation.item.truncate' as const,
+                      item_id: lastAssistantItem,
+                      content_index: 0,
+                      audio_end_ms: elapsedTime
+                    };
+
+                    // Access transport to send raw event
+                    session?.transport.sendEvent(truncateEvent as any);
+                    logger.info('✂️  Sent truncate event to OpenAI', {
+                      callSid,
+                      item_id: lastAssistantItem,
+                      audio_end_ms: elapsedTime
+                    });
+                  } catch (error) {
+                    logger.error('Failed to send truncate event', {
+                      callSid,
+                      error: error instanceof Error ? error.message : String(error)
+                    });
+                  }
+
+                  // Cancel any ongoing AI response generation
+                  try {
+                    session?.interrupt();
+                    logger.info('🚫 Interrupted AI response generation', { callSid });
+                  } catch (error) {
+                    logger.warn('Could not interrupt response', {
+                      callSid,
+                      error: error instanceof Error ? error.message : String(error)
+                    });
+                  }
+
+                  // Clear Twilio's audio buffer to stop playback immediately
+                  if (streamSid) {
+                    try {
+                      socket.send(JSON.stringify({
+                        event: 'clear',
+                        streamSid: streamSid
+                      }));
+                      logger.info('🧹 Cleared Twilio audio buffer', { callSid, streamSid });
+                    } catch (error) {
+                      logger.error('Failed to clear Twilio buffer', {
+                        callSid,
+                        error: error instanceof Error ? error.message : String(error)
+                      });
+                    }
+                  }
+
+                  // Reset interruption tracking state
+                  responseStartTimestampTwilio = null;
+                  lastAssistantItem = null;
+
+                  // Broadcast interruption event to UI
                   broadcastEvent({
                     type: 'conversation.interrupted',
                     callSid,
-                    data: { reason: 'User started speaking' }
+                    data: {
+                      reason: 'User started speaking',
+                      audioHeardMs: elapsedTime
+                    }
                   });
-                } catch (error) {
-                  logger.warn('Could not cancel response', {
-                    callSid,
-                    error: error instanceof Error ? error.message : String(error)
-                  });
+                } else {
+                  // User started speaking but AI wasn't speaking - just log it
+                  logger.debug('User started speaking (AI was not speaking)', { callSid });
                 }
               }
 
@@ -294,6 +363,11 @@ Continue the conversation naturally from where it left off. You were in the midd
                     data: { streamSid: event.message.start.streamSid }
                   });
                 } else if (event.message?.event === 'media') {
+                  // Track current timestamp for interruption handling
+                  if (event.message.media?.timestamp) {
+                    latestMediaTimestamp = event.message.media.timestamp;
+                  }
+
                   // Broadcast inbound audio (from user) if anyone is listening
                   if (callSid && hasAudioListeners(callSid)) {
                     broadcastAudio(callSid, {
@@ -336,6 +410,21 @@ Continue the conversation naturally from where it left off. You were in the midd
                   }
                 }
               } else if (event.type === 'response.audio.delta') {
+                // Track when AI starts speaking for interruption handling
+                if (!responseStartTimestampTwilio) {
+                  responseStartTimestampTwilio = latestMediaTimestamp;
+                  logger.info('🎙️ AI started speaking', {
+                    callSid,
+                    timestamp: responseStartTimestampTwilio,
+                    item_id: event.item_id
+                  });
+                }
+
+                // Track which response item is currently playing
+                if (event.item_id) {
+                  lastAssistantItem = event.item_id;
+                }
+
                 // Don't broadcast OpenAI audio - it's in PCM16 24kHz format
                 // which is difficult to play in the browser alongside Twilio's μ-law 8kHz
                 // The user can hear the AI voice through their phone
@@ -367,6 +456,10 @@ Continue the conversation naturally from where it left off. You were in the midd
                   callSid,
                   data: { text: event.transcript }
                 });
+
+                // Reset interruption tracking state - AI finished speaking naturally
+                responseStartTimestampTwilio = null;
+                lastAssistantItem = null;
 
                 // If end_call is pending, execute after audio is done
                 if (pendingEndCall && pendingEndCall.callSid === callSid) {

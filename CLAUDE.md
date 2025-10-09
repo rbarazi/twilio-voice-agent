@@ -185,6 +185,15 @@ Server-Sent Events (SSE) stream events to UI:
 - Call status changes
 - Connection events
 
+### Interruption Handling
+
+Sophisticated interruption handling based on Twilio's reference implementation:
+- Tracks precise timestamps of AI speech start and user interruption
+- Sends `conversation.item.truncate` to OpenAI with exact `audio_end_ms`
+- Clears Twilio's audio buffer immediately (stops playback within ~200ms)
+- Maintains accurate conversation context
+- See `docs/INTERRUPTION_HANDLING.md` and `docs/INTERRUPTION_IMPLEMENTATION.md`
+
 ### Audio Broadcasting ("Listen In")
 
 Separate WebSocket per call for live audio:
