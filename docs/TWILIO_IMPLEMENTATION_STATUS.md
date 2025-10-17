@@ -38,7 +38,7 @@
 - ✅ Tunnel routing working correctly
 - ✅ WebSocket support enabled
 - ✅ Both HTTP and WSS endpoints functional
-- ✅ Public domain accessible: `rida-mbp-agentify-voice.rida.me`
+- ✅ Public domain accessible: `your-tunnel-domain.com`
 
 ## 🎉 Fully Working Features
 
@@ -157,11 +157,11 @@ Go to Cloudflare dashboard and update the tunnel's ingress rules to match the co
 3. Click "Configure" → "Public Hostname"
 4. Update/add rules in this EXACT order:
    - **Rule 1**:
-     - Public hostname: `rida-mbp-agentify-voice.rida.me`
+     - Public hostname: `your-tunnel-domain.com`
      - Path: `/twilio/*`
      - Service: `http://localhost:5050`
    - **Rule 2**:
-     - Public hostname: `rida-mbp-agentify-voice.rida.me`
+     - Public hostname: `your-tunnel-domain.com`
      - Service: `http://localhost:3000`
 
 ### Option 2: Create New Config-Only Tunnel
@@ -199,7 +199,7 @@ curl -i -N \
   -H "Upgrade: websocket" \
   -H "Sec-WebSocket-Version: 13" \
   -H "Sec-WebSocket-Key: test123" \
-  https://rida-mbp-agentify-voice.rida.me/twilio/media-stream
+  https://your-tunnel-domain.com/twilio/media-stream
 
 # Expected: HTTP 101 Switching Protocols
 # NOT: HTTP 502 error
@@ -209,7 +209,7 @@ curl -i -N \
 
 ```bash
 # Should return {"status":"ok"}
-curl https://rida-mbp-agentify-voice.rida.me/twilio/health
+curl https://your-tunnel-domain.com/twilio/health
 ```
 
 ### Step 3: Test End-to-End Call Flow
@@ -223,7 +223,7 @@ curl https://rida-mbp-agentify-voice.rida.me/twilio/health
 
 **Option B: Outbound Call**
 ```bash
-curl -X POST https://rida-mbp-agentify-voice.rida.me/twilio/outbound-call \
+curl -X POST https://your-tunnel-domain.com/twilio/outbound-call \
   -H "Content-Type: application/json" \
   -d '{
     "to": "+14168327527",
@@ -245,7 +245,7 @@ If using Option 3 (separate subdomain), update Twilio phone number webhook:
 2. Click on your phone number: +16479556388
 3. Update "A Call Comes In" webhook to:
    - `https://twilio.rida.me/incoming-call` (if using Option 3)
-   - OR `https://rida-mbp-agentify-voice.rida.me/twilio/incoming-call` (if using Option 1)
+   - OR `https://your-tunnel-domain.com/twilio/incoming-call` (if using Option 1)
 
 ### Step 5: Monitor Logs
 
@@ -318,12 +318,12 @@ If WebSocket still fails after rebuild:
 **Check**:
 1. Twilio server is running: `curl http://localhost:5050/twilio/health`
 2. Webhook URL configured in Twilio console
-3. Public domain is accessible: `curl https://rida-mbp-agentify-voice.rida.me/twilio/health`
+3. Public domain is accessible: `curl https://your-tunnel-domain.com/twilio/health`
 
 ## 🎯 Success Criteria
 
 The integration is working when:
-1. ✅ Health endpoint responds: `https://rida-mbp-agentify-voice.rida.me/twilio/health`
+1. ✅ Health endpoint responds: `https://your-tunnel-domain.com/twilio/health`
 2. ✅ WebSocket test returns 101: See Step 2 above
 3. ✅ Incoming calls connect and AI speaks
 4. ✅ Outbound calls work via API
@@ -333,7 +333,7 @@ The integration is working when:
 ## 📞 Contact Information
 
 - Twilio Phone Number: +16479556388
-- Public Domain: rida-mbp-agentify-voice.rida.me
+- Public Domain: your-tunnel-domain.com
 - Twilio Server: http://localhost:5050
 - Next.js UI: http://localhost:3000
 
@@ -344,14 +344,14 @@ The integration is working when:
 npm run dev:all
 
 # 2. Test health
-curl https://rida-mbp-agentify-voice.rida.me/twilio/health
+curl https://your-tunnel-domain.com/twilio/health
 
 # 3. Test WebSocket (should be 101, not 502)
 curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
-  https://rida-mbp-agentify-voice.rida.me/twilio/media-stream
+  https://your-tunnel-domain.com/twilio/media-stream
 
 # 4. Make test call
-curl -X POST https://rida-mbp-agentify-voice.rida.me/twilio/outbound-call \
+curl -X POST https://your-tunnel-domain.com/twilio/outbound-call \
   -H "Content-Type: application/json" \
   -d '{"to":"+14168327527","task":{"type":"custom","prompt":"Test call"}}'
 ```

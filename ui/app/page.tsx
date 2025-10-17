@@ -11,7 +11,7 @@ interface TranscriptItem {
 interface ToolCall {
   timestamp: string;
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 interface ModelInfo {
@@ -22,7 +22,7 @@ interface ModelInfo {
 }
 
 export default function TwilioPage() {
-  const [phoneNumber, setPhoneNumber] = useState("+14168327527");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [taskPrompt, setTaskPrompt] = useState(
     "You are a helpful AI assistant. Greet the caller and ask how you can help them."
   );
@@ -43,6 +43,30 @@ export default function TwilioPage() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioStreamRef = useRef<WebSocket | null>(null);
+
+  // Get API base URL - use relative path for Cloudflare Tunnel routing
+  const getApiBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    // Fallback for SSR - use environment variable if available
+    return process.env.NEXT_PUBLIC_API_URL || "";
+  };
+
+  const getWsBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${window.location.host}`;
+    }
+    // Fallback for SSR
+    return process.env.NEXT_PUBLIC_WS_URL || "";
+  };
+
+  // Validate phone number format
+  const isValidPhoneNumber = (phone: string): boolean => {
+    // E.164 format: +[country code][number] (10-15 digits total)
+    return /^\+\d{10,15}$/.test(phone);
+  };
 
   // Fetch available models on mount
   useEffect(() => {
@@ -85,7 +109,7 @@ export default function TwilioPage() {
     try {
       addLog("Initiating call...");
       const response = await fetch(
-        "https://rida-mbp-agentify-voice.rida.me/twilio/outbound-call",
+        `${getApiBaseUrl()}/twilio/outbound-call`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -132,7 +156,7 @@ export default function TwilioPage() {
 
     // Connect to WebSocket for real-time events
     const ws = new WebSocket(
-      "wss://rida-mbp-agentify-voice.rida.me/twilio/events"
+      `${getWsBaseUrl()}/twilio/events`
     );
 
     ws.onopen = () => {
@@ -193,7 +217,7 @@ export default function TwilioPage() {
       addLog("Disconnected from event stream");
     };
 
-    eventSourceRef.current = ws as any;
+    eventSourceRef.current = ws as unknown as EventSource;
   };
 
   const endCall = async () => {
@@ -204,7 +228,7 @@ export default function TwilioPage() {
 
       // Call the backend to end the Twilio call
       const response = await fetch(
-        `https://rida-mbp-agentify-voice.rida.me/twilio/end-call/${currentCallSid}`,
+        `${getApiBaseUrl()}/twilio/end-call/${currentCallSid}`,
         { method: "POST" }
       );
 
@@ -238,8 +262,9 @@ export default function TwilioPage() {
 
     try {
       // Create AudioContext
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext ||
+        (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const audioContext = new AudioContextClass();
       audioContextRef.current = audioContext;
 
       // Create gain node for volume control
@@ -249,7 +274,7 @@ export default function TwilioPage() {
 
       // Connect to audio stream WebSocket
       const ws = new WebSocket(
-        `wss://rida-mbp-agentify-voice.rida.me/twilio/audio-stream/${currentCallSid}`
+        `${getWsBaseUrl()}/twilio/audio-stream/${currentCallSid}`
       );
       audioStreamRef.current = ws;
 
@@ -270,8 +295,8 @@ export default function TwilioPage() {
             }
 
             // Convert to Float32Array based on codec
-            let float32Array;
-            let sourceSampleRate;
+            let float32Array: Float32Array;
+            let sourceSampleRate: number;
             if (data.codec === "g711_ulaw") {
               // Decode μ-law to PCM (8kHz for phone audio)
               float32Array = decodeULaw(audioArray);
@@ -438,10 +463,19 @@ export default function TwilioPage() {
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 bg-gray-700 rounded border focus:outline-none ${
+                      phoneNumber && !isValidPhoneNumber(phoneNumber)
+                        ? "border-red-500 focus:border-red-500"
+                        : "border-gray-600 focus:border-blue-500"
+                    }`}
                     placeholder="+1234567890"
                     disabled={isCallActive}
                   />
+                  {phoneNumber && !isValidPhoneNumber(phoneNumber) && (
+                    <p className="text-xs text-red-400 mt-1">
+                      Invalid format. Use E.164: +[country code][number] (e.g., +14165551234)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -579,8 +613,15 @@ export default function TwilioPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={initiateCall}
-                    disabled={isCallActive || !phoneNumber}
+                    disabled={isCallActive || !phoneNumber || !isValidPhoneNumber(phoneNumber)}
                     className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded font-medium transition-colors"
+                    title={
+                      !phoneNumber
+                        ? "Enter a phone number"
+                        : !isValidPhoneNumber(phoneNumber)
+                        ? "Invalid phone number format (use E.164: +1234567890)"
+                        : "Initiate call"
+                    }
                   >
                     {isCallActive ? "Call in Progress..." : "Initiate Call"}
                   </button>

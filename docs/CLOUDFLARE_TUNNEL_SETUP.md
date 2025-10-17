@@ -1,10 +1,6 @@
 # Cloudflare Tunnel Configuration for Twilio Integration
 
-## Current Setup
-
-You're currently using the Cloudflare tunnel domain: `rida-mbp-agentify-voice.rida.me`
-
-The tunnel is already configured to route the Next.js web UI. Now you need to add routing for the Twilio server.
+This guide explains how to configure a Cloudflare Tunnel to provide public HTTPS access to your Twilio voice agent application.
 
 ## Configuration Steps
 
@@ -12,44 +8,54 @@ The tunnel is already configured to route the Next.js web UI. Now you need to ad
 
 1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
 2. Navigate to **Networks** → **Tunnels**
-3. Find your tunnel (the one using domain `rida-mbp-agentify-voice.rida.me`)
+3. Find your tunnel or create a new one
 4. Click **Configure**
 
-### 2. Update Ingress Rules
+### 2. Configure Ingress Rules
 
-You need to add the Twilio server routes BEFORE the existing catch-all route. The order matters!
-
-Update your tunnel configuration to include these ingress rules:
+Configure path-based routing where Twilio API routes come BEFORE the Next.js catch-all. The order matters!
 
 ```yaml
 ingress:
   # Twilio endpoints - MUST come before the Next.js catch-all
-  - hostname: rida-mbp-agentify-voice.rida.me
+  - hostname: your-tunnel-domain.com
     path: /twilio/*
-    service: http://localhost:5050
+    service: http://app:5050
 
-  # Next.js web UI (existing)
-  - hostname: rida-mbp-agentify-voice.rida.me
-    service: http://localhost:3000
+  # Next.js web UI - catch-all for everything else
+  - hostname: your-tunnel-domain.com
+    service: http://app:3000
 
   # Fallback (required)
   - service: http_status:404
 ```
 
-**Important:** The Twilio routes (`/twilio/*`) MUST be listed before the Next.js route, otherwise all requests will go to Next.js!
+**Important:**
+- The Twilio routes (`/twilio/*`) MUST be listed before the Next.js route, otherwise all requests will go to Next.js!
+- Replace `your-tunnel-domain.com` with your actual tunnel hostname
+- Use `http://app:5050` and `http://app:3000` if running in Docker Compose (as in devcontainer)
+- Use `http://localhost:5050` and `http://localhost:3000` if running services directly on host
 
 ### 3. Via Cloudflare Dashboard (Recommended)
 
 1. In the tunnel configuration page, go to the **Public Hostname** tab
-2. Click **Add a public hostname**
-3. Configure as follows:
-   - **Subdomain**: (leave blank if using root domain)
-   - **Domain**: rida-mbp-agentify-voice.rida.me
+2. Add TWO public hostnames in this order:
+
+   **First hostname (Twilio API):**
+   - **Subdomain**: (your subdomain or leave blank)
+   - **Domain**: your-domain.com
    - **Path**: /twilio/*
    - **Type**: HTTP
-   - **URL**: localhost:5050
+   - **URL**: app:5050 (or localhost:5050 if not using Docker)
 
-4. Save the configuration
+   **Second hostname (Next.js UI):**
+   - **Subdomain**: (same as above)
+   - **Domain**: your-domain.com
+   - **Path**: (leave blank for catch-all)
+   - **Type**: HTTP
+   - **URL**: app:3000 (or localhost:3000 if not using Docker)
+
+3. Save the configuration
 
 ### 4. Via CLI (Alternative)
 
@@ -73,7 +79,7 @@ Once the tunnel is configured, test the endpoints:
 ### 1. Test Health Endpoint
 
 ```bash
-curl https://rida-mbp-agentify-voice.rida.me/twilio/health
+curl https://your-tunnel-domain.com/twilio/health
 ```
 
 Expected response:
@@ -87,7 +93,7 @@ Expected response:
 ### 2. Test Incoming Call Endpoint
 
 ```bash
-curl -X POST https://rida-mbp-agentify-voice.rida.me/twilio/incoming-call \
+curl -X POST https://your-tunnel-domain.com/twilio/incoming-call \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "CallSid=TEST123&From=+1234567890&To=+1234567890"
 ```
@@ -101,20 +107,27 @@ Expected: TwiML XML response
 npm install -g wscat
 
 # Test WebSocket connection
-wscat -c "wss://rida-mbp-agentify-voice.rida.me/twilio/media-stream"
+wscat -c "wss://your-tunnel-domain.com/twilio/media-stream"
 ```
 
 Expected: Connection should be established without errors
+
+### 4. Test UI
+
+```bash
+# Should load Next.js application
+curl https://your-tunnel-domain.com/
+```
 
 ## Configure Twilio Phone Number
 
 Once the tunnel is working, configure your Twilio phone number:
 
 1. Go to [Twilio Console](https://console.twilio.com/us1/develop/phone-numbers/manage/incoming)
-2. Select your phone number: **+16479556388**
+2. Select your phone number
 3. Under **Voice Configuration**:
    - **A CALL COMES IN**: Webhook
-   - **URL**: `https://rida-mbp-agentify-voice.rida.me/twilio/incoming-call`
+   - **URL**: `https://your-tunnel-domain.com/twilio/incoming-call`
    - **HTTP**: POST
 4. Click **Save**
 
@@ -157,13 +170,14 @@ This will run both servers concurrently.
 
 ### 404 on Health Check
 
-**Problem**: `https://rida-mbp-agentify-voice.rida.me/twilio/health` returns 404
+**Problem**: `https://your-tunnel-domain.com/twilio/health` returns 404
 
 **Checklist**:
-1. Is Twilio server running? Check: `curl http://localhost:5050/twilio/health`
-2. Is tunnel running? Check: `cloudflared tunnel list`
-3. Are ingress rules correct? Check tunnel configuration
-4. Try restarting the tunnel
+1. Is Twilio server running? Check: `npm run server:dev`
+2. Is tunnel running? Check: `docker ps | grep cloudflared` or `cloudflared tunnel list`
+3. Are ingress rules correct? Verify `/twilio/*` route comes BEFORE catch-all
+4. Check service URLs match your setup (`app:5050` for Docker, `localhost:5050` for host)
+5. Try restarting the tunnel
 
 ## Next Steps
 

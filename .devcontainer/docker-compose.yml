@@ -5,9 +5,6 @@ services:
       - ..:/workspaces/twilio-voice-agent:cached
       - ~/.gitconfig:/home/node/.gitconfig:cached
     command: sleep infinity
-    ports:
-      - "3000:3000"
-      - "5050:5050"
     env_file:
       - ../.env
 

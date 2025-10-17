@@ -32,18 +32,6 @@
     }
   },
 
-  "forwardPorts": [3000, 5050],
-  "portsAttributes": {
-    "3000": {
-      "label": "Next.js UI",
-      "onAutoForward": "notify"
-    },
-    "5050": {
-      "label": "Twilio Server",
-      "onAutoForward": "notify"
-    }
-  },
-
   "postCreateCommand": "npm install",
 
   "remoteUser": "node"

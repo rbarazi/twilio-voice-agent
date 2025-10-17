@@ -12,9 +12,10 @@ This devcontainer provides a consistent development environment for the Twilio V
   - Tailwind CSS IntelliSense
   - TypeScript tooling
 - **Automatic dependency installation** on container creation
-- **Ports forwarded**:
-  - **3000**: Next.js UI
-  - **5050**: Twilio Server
+- **Cloudflare Tunnel routing**:
+  - All public access through tunnel (no port forwarding required)
+  - **Next.js UI**: `https://your-tunnel-domain.com/`
+  - **Twilio Server**: `https://your-tunnel-domain.com/twilio/*`
 - **Environment variables** from `.env` and `.devcontainer/cloudflared.env`
 
 ## Prerequisites
@@ -87,14 +88,22 @@ Add your tunnel token:
 7. Configure tunnel ingress rules in Cloudflare dashboard:
    ```yaml
    ingress:
-     - hostname: your-domain.com
-       service: http://localhost:3000
-       path: /*
-     - hostname: your-domain.com
-       service: http://localhost:5050
+     # Twilio API endpoints - MUST come first
+     - hostname: your-tunnel-domain.com
        path: /twilio/*
+       service: http://app:5050
+
+     # Next.js UI - catch-all for everything else
+     - hostname: your-tunnel-domain.com
+       service: http://app:3000
+
+     # Fallback (required)
      - service: http_status:404
    ```
+
+   **Important**: The Twilio route (`/twilio/*`) MUST be listed before the Next.js catch-all route!
+
+   Replace `your-tunnel-domain.com` with your actual tunnel hostname from Cloudflare.
 
 8. Update `PUBLIC_DOMAIN` in `.env` to match your tunnel hostname
 
@@ -110,21 +119,22 @@ Add your tunnel token:
 
 ### 3. Access Your Application
 
-- **Local UI**: http://localhost:3000
-- **Local Twilio Server**: http://localhost:5050
-- **Public URL**: Check your Cloudflare Tunnel dashboard for the public HTTPS URL
+All access is through the Cloudflare Tunnel (no local port access needed):
+
+- **UI**: https://your-tunnel-domain.com/
+- **Twilio API**: https://your-tunnel-domain.com/twilio/*
+- **Health Check**: https://your-tunnel-domain.com/twilio/health
+
+Note: Ports are not exposed on the host. All traffic routes through the tunnel.
 
 ### 4. Test the Setup
 
 ```bash
-# Health check
-curl http://localhost:5050/twilio/health
+# Health check (via tunnel)
+curl https://your-tunnel-domain.com/twilio/health
 
-# Or via public URL
-curl https://your-domain.com/twilio/health
-
-# Make a test call (requires Cloudflare Tunnel)
-./scripts/call.sh +14168327527
+# Make a test call
+./scripts/call.sh +1234567890
 ```
 
 ## Architecture
@@ -135,13 +145,16 @@ The devcontainer uses Docker Compose with two services:
 - Node.js 20 with TypeScript
 - Loads environment from `.env`
 - Mounts workspace at `/workspaces/twilio-voice-agent`
-- Exposes ports 3000 (UI) and 5050 (Twilio server)
+- Runs both Next.js UI (port 3000) and Twilio server (port 5050)
+- Ports accessible only via Cloudflare Tunnel (not exposed to host)
 
 ### 2. **cloudflared** - Cloudflare Tunnel
-- Provides public HTTPS access
+- Provides public HTTPS access (only way to access the application)
 - Loads credentials from `.devcontainer/cloudflared.env`
-- Routes traffic to localhost:3000 and localhost:5050
-- Required for Twilio webhooks
+- Routes traffic:
+  - `/twilio/*` → app:5050 (Twilio server)
+  - `/*` → app:3000 (Next.js UI)
+- Required for Twilio webhooks and all access
 
 ## Configuration Files
 
@@ -172,21 +185,21 @@ npm run server:dev
 
 ```bash
 # Via UI
-open http://localhost:3000
+open https://your-tunnel-domain.com/
 
 # Via CLI
-./scripts/call.sh +14168327527
+./scripts/call.sh +1234567890
 
 # Appointment reminder
-./scripts/call-reminder.sh +14168327527
+./scripts/call-reminder.sh +1234567890
 
 # Survey
-./scripts/call-survey.sh +14168327527
+./scripts/call-survey.sh +1234567890
 ```
 
 ### Monitoring
 
-- **UI**: http://localhost:3000 - Live transcripts and tool calls
+- **UI**: https://your-tunnel-domain.com/ - Live transcripts and tool calls
 - **Logs**: Server logs display in terminal
 - **Debug Mode**: `LOG_LEVEL=debug npm run server:dev`
 
@@ -212,9 +225,12 @@ Add to `.devcontainer/devcontainer.json`:
 
 ### Changing Ports
 
-Update in both files:
-- `.devcontainer/devcontainer.json` - `forwardPorts` and `portsAttributes`
-- `.devcontainer/docker-compose.yml` - `ports` section
+If you need to change the application ports (3000 or 5050):
+1. Update `.env` - `PORT` variable for Twilio server
+2. Update Cloudflare tunnel ingress rules to match new ports
+3. Update application configuration files
+
+Note: Ports are not exposed to host, so no docker-compose changes needed
 
 ## Troubleshooting
 
@@ -236,12 +252,13 @@ Update in both files:
   echo $TWILIO_ACCOUNT_SID
   ```
 
-### Ports not accessible
+### Application not accessible
 
 - Ensure servers are running: `npm run dev`
 - Check Docker containers: `docker ps`
-- Verify port forwarding: `F1` → **Ports: Focus on Ports View**
-- Check firewall settings
+- Verify Cloudflare tunnel is running: `docker ps | grep cloudflared`
+- Test tunnel: `curl https://your-tunnel-domain.com/twilio/health`
+- Check tunnel ingress rules in Cloudflare dashboard
 
 ### Twilio Webhooks Failing
 

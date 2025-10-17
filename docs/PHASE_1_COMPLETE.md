@@ -82,7 +82,7 @@ body: JSON.stringify({
 ### Via API
 
 ```bash
-curl -X POST https://rida-mbp-agentify-voice.rida.me/twilio/outbound-call \
+curl -X POST https://your-tunnel-domain.com/twilio/outbound-call \
   -H "Content-Type: application/json" \
   -d '{
     "to": "+14168327527",
