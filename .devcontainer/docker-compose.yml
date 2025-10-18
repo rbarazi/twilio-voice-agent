@@ -7,10 +7,20 @@ services:
     command: sleep infinity
     env_file:
       - ../.env
+    networks:
+      - devnet
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     env_file:
       - .cloudflared.env
-    command: ["tunnel", "--no-autoupdate", "run"]
+    command: ["tunnel", "--no-autoupdate", "run", "--protocol", "http2"]
+    depends_on:
+      - app
+    networks:
+      - devnet
+
+networks:
+  devnet:
+    driver: bridge

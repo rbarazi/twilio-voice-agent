@@ -101,6 +101,8 @@ Add your tunnel token:
      - service: http_status:404
    ```
 
+   **Note**: The service URLs use `app` (the Docker Compose service name) to reference the container on the shared network.
+
    **Important**: The Twilio route (`/twilio/*`) MUST be listed before the Next.js catch-all route!
 
    Replace `your-tunnel-domain.com` with your actual tunnel hostname from Cloudflare.
@@ -241,6 +243,9 @@ Note: Ports are not exposed to host, so no docker-compose changes needed
 - View tunnel logs: `docker logs <cloudflared-container-id>`
 - Restart container: `F1` → **Dev Containers: Rebuild Container**
 - Verify ingress rules in Cloudflare dashboard
+- **QUIC connection issues**: The tunnel uses HTTP/2 protocol to avoid UDP/QUIC issues in container environments
+- **Network connectivity**: Both containers must be on the `devnet` network (configured in docker-compose.yml)
+- Verify service names in ingress rules point to `http://app:3000` and `http://app:5050`
 
 ### API Keys not found
 

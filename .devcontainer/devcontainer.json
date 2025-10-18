@@ -33,6 +33,6 @@
   },
 
   "postCreateCommand": "npm install",
-
+  "forwardPorts": [3000, 5050],
   "remoteUser": "node"
 }
