@@ -1,0 +1,52 @@
+services:
+  # Next.js UI (Port 3000)
+  - type: web
+    name: twilio-voice-agent-ui
+    runtime: node
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run ui:start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /
+
+  # Twilio Server (Port 5050)
+  - type: web
+    name: twilio-voice-agent-server
+    runtime: node
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server:start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TWILIO_SERVER_PORT
+        value: 5050
+      - key: PORT
+        value: 5050
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: PUBLIC_DOMAIN
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+    healthCheckPath: /twilio/health
+
+# Note: After deployment, you'll need to:
+# 1. Set up environment variables in Render dashboard
+# 2. Update PUBLIC_DOMAIN to point to your Render URL
+# 3. Configure Cloudflare Tunnel or similar for webhook routing
+# 4. Both services need to be accessible from a single domain for proper operation

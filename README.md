@@ -2,6 +2,16 @@
 
 AI-powered voice agent system using Twilio and OpenAI Realtime API. This system enables phone-based conversations with AI agents that can handle tasks like appointment reminders, surveys, notifications, and custom interactions.
 
+## 🚀 Quick Deploy
+
+Deploy your own instance in minutes:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rbarazi/twilio-voice-agent)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/twilio-voice-agent)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/rbarazi/twilio-voice-agent)
+
+**First time deploying?** See our comprehensive [Deployment Guide](docs/DEPLOYMENT.md) and [API Credentials Guide](docs/API_CREDENTIALS.md).
+
 ## Architecture
 
 The system consists of two main components:
@@ -20,17 +30,22 @@ The system consists of two main components:
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture documentation.
 
-## Quick Start
+## 📋 Prerequisites
 
-### Prerequisites
+Before deploying, you'll need:
 
-- Node.js 18+ and npm
-- OpenAI API key with Realtime API access
-- Twilio account with:
+- **OpenAI API Key** with Realtime API access ([Get one here](https://platform.openai.com/api-keys))
+- **Twilio Account** with phone number ([Sign up](https://www.twilio.com/try-twilio))
   - Account SID
   - Auth Token
-  - Phone number
-- Public domain with HTTPS (for Twilio webhooks)
+  - Phone number with Voice capability
+- **Public HTTPS Domain** (provided automatically by deployment platforms)
+
+**Need help getting credentials?** See our detailed [API Credentials Guide](docs/API_CREDENTIALS.md) with step-by-step instructions.
+
+## Quick Start (Local Development)
+
+Want to run locally first? Follow these steps:
 
 ### Installation
 
@@ -73,16 +88,22 @@ npm run ui:dev
 npm run server:dev
 ```
 
-### Cloudflare Tunnel Setup
+### Production Deployment
 
-For production deployment with public HTTPS access:
+Ready to deploy to the cloud? We support multiple platforms:
 
-1. Install Cloudflare Tunnel (cloudflared)
-2. Configure tunnel with ingress rules:
-   - `/*` → `localhost:3000` (Next.js UI)
-   - `/twilio/*` → `localhost:5050` (Twilio Server)
+- **[Render](docs/DEPLOYMENT.md#render-recommended)** - Free tier available, auto-deploy from GitHub
+- **[Railway](docs/DEPLOYMENT.md#railway)** - Excellent DX, generous free tier
+- **[Heroku](docs/DEPLOYMENT.md#heroku)** - Classic choice (paid)
+- **[Self-Hosted](docs/DEPLOYMENT.md#self-hosted)** - Full control with your own infrastructure
 
-See [docs/CLOUDFLARE_TUNNEL_SETUP.md](docs/CLOUDFLARE_TUNNEL_SETUP.md) for detailed setup.
+See our comprehensive **[Deployment Guide](docs/DEPLOYMENT.md)** for:
+- One-click deploy buttons
+- Step-by-step platform instructions
+- Environment variable configuration
+- Cloudflare Tunnel setup (for self-hosted)
+- Cost estimates
+- Troubleshooting tips
 
 ## Usage
 
@@ -290,12 +311,28 @@ See [docs/FUTURE_IMPROVEMENTS.md](docs/FUTURE_IMPROVEMENTS.md) for the roadmap.
 
 See [LICENSE](LICENSE) file for details.
 
+## 📚 Documentation
+
+Comprehensive guides for every aspect of the system:
+
+### Getting Started
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Deploy to Render, Railway, Heroku, or self-host
+- **[API Credentials Guide](docs/API_CREDENTIALS.md)** - Step-by-step guide to get OpenAI and Twilio credentials
+
+### Technical Documentation
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and data flows
+- **[Twilio Integration](docs/twilio-integration.md)** - Complete API documentation
+- **[Testing Guide](docs/twilio-testing-guide.md)** - Testing procedures and debugging
+- **[Cloudflare Tunnel Setup](docs/CLOUDFLARE_TUNNEL_SETUP.md)** - Self-hosted webhook configuration
+- **[Interruption Handling](docs/INTERRUPTION_HANDLING.md)** - How conversation interruptions work
+- **[Future Improvements](docs/FUTURE_IMPROVEMENTS.md)** - Roadmap and planned features
+
 ## Support
 
 For issues and questions:
-- Check [docs/](docs/) directory for detailed documentation
-- Review [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design
-- See [docs/twilio-testing-guide.md](docs/twilio-testing-guide.md) for debugging
+- Check the [📚 Documentation](#-documentation) section above
+- Open an issue on [GitHub](https://github.com/rbarazi/twilio-voice-agent/issues)
+- Review existing issues for similar problems
 
 ## Contributing
 

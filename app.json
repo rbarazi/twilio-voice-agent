@@ -1,0 +1,64 @@
+{
+  "name": "Twilio Voice Agent",
+  "description": "AI-powered voice agent system using Twilio and OpenAI Realtime API for phone-based conversations",
+  "repository": "https://github.com/rbarazi/twilio-voice-agent",
+  "logo": "https://openai.com/favicon.ico",
+  "keywords": [
+    "twilio",
+    "openai",
+    "voice",
+    "ai",
+    "realtime",
+    "phone",
+    "assistant"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "OPENAI_API_KEY": {
+      "description": "Your OpenAI API key with access to Realtime API. Get it from: https://platform.openai.com/api-keys",
+      "required": true
+    },
+    "TWILIO_ACCOUNT_SID": {
+      "description": "Your Twilio Account SID from: https://console.twilio.com/",
+      "required": true
+    },
+    "TWILIO_AUTH_TOKEN": {
+      "description": "Your Twilio Auth Token from: https://console.twilio.com/",
+      "required": true
+    },
+    "TWILIO_PHONE_NUMBER": {
+      "description": "Your Twilio phone number in E.164 format (e.g., +14155551234). Get one from: https://console.twilio.com/us1/develop/phone-numbers/manage/search",
+      "required": true
+    },
+    "PUBLIC_DOMAIN": {
+      "description": "Your public HTTPS domain for Twilio webhooks (will be your Heroku app URL, e.g., https://your-app-name.herokuapp.com)",
+      "required": true
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level (debug, info, warn, error)",
+      "value": "info",
+      "required": false
+    },
+    "NODE_ENV": {
+      "description": "Node environment",
+      "value": "production"
+    },
+    "TWILIO_SERVER_PORT": {
+      "description": "Port for Twilio server",
+      "value": "5050"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1
+    }
+  },
+  "stack": "heroku-22",
+  "scripts": {
+    "postdeploy": "echo 'Deployment complete! Configure your environment variables and set PUBLIC_DOMAIN to your Heroku app URL.'"
+  }
+}
