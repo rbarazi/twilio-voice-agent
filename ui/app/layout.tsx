@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { UserConfigProvider } from "@/contexts/UserConfigContext";
 
 export const metadata: Metadata = {
   title: "Twilio Voice Agent",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <UserConfigProvider>{children}</UserConfigProvider>
+      </body>
     </html>
   );
 }

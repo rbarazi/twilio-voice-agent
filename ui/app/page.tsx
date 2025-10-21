@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useUserConfig } from "@/contexts/UserConfigContext";
+import Link from "next/link";
 
 interface TranscriptItem {
   timestamp: string;
@@ -22,6 +24,7 @@ interface ModelInfo {
 }
 
 export default function TwilioPage() {
+  const { config, hasConfig } = useUserConfig();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [taskPrompt, setTaskPrompt] = useState(
     "You are a helpful AI assistant. Greet the caller and ask how you can help them."
@@ -108,25 +111,37 @@ export default function TwilioPage() {
   const initiateCall = async () => {
     try {
       addLog("Initiating call...");
+
+      // Include user credentials if configured
+      const requestBody: any = {
+        to: phoneNumber,
+        task: {
+          type: taskType,
+          prompt: taskPrompt,
+          context: {},
+        },
+        agentConfig: {
+          voice,
+          temperature,
+          noiseReduction,
+          model,
+        },
+      };
+
+      // Add user credentials if they exist
+      if (hasConfig) {
+        requestBody.userCredentials = config;
+        addLog("Using user-provided credentials");
+      } else {
+        addLog("Using server environment credentials");
+      }
+
       const response = await fetch(
         `${getApiBaseUrl()}/twilio/outbound-call`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: phoneNumber,
-            task: {
-              type: taskType,
-              prompt: taskPrompt,
-              context: {},
-            },
-            agentConfig: {
-              voice,
-              temperature,
-              noiseReduction,
-              model,
-            },
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -440,13 +455,49 @@ export default function TwilioPage() {
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <div className="container mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">
-            Twilio Voice Agent Monitor
-          </h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold">
+              Twilio Voice Agent Monitor
+            </h1>
+            <Link
+              href="/settings"
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Settings
+            </Link>
+          </div>
           <p className="text-gray-400">
             Initiate and monitor AI voice calls via Twilio
           </p>
         </div>
+
+        {/* Configuration Banner */}
+        {!hasConfig && (
+          <div className="mb-6 bg-yellow-900/30 border border-yellow-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-200 mb-1">Configure Your API Keys</h3>
+                <p className="text-sm text-yellow-100 mb-3">
+                  To use this voice agent, you need to configure your OpenAI and Twilio credentials.
+                  Your keys will be stored securely in your browser and never leave your device.
+                </p>
+                <Link
+                  href="/settings"
+                  className="inline-block px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Configure Now
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Panel - Call Setup */}
