@@ -1,36 +1,18 @@
 services:
-  # Next.js UI (Port 3000)
+  # Twilio Voice Agent (with built-in reverse proxy)
+  # Runs both UI (port 3000) and Twilio server (port 5050) internally
+  # Exposes single port with routing: /twilio/* -> 5050, /* -> 3000
   - type: web
-    name: twilio-voice-agent-ui
+    name: twilio-voice-agent
     runtime: node
     env: node
     region: oregon
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: npm run ui:start
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
-    healthCheckPath: /
-
-  # Twilio Server (Port 5050)
-  - type: web
-    name: twilio-voice-agent-server
-    runtime: node
-    env: node
-    region: oregon
-    plan: free
-    buildCommand: npm install
-    startCommand: npm run server:start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: TWILIO_SERVER_PORT
-        value: 5050
-      - key: PORT
-        value: 5050
       - key: OPENAI_API_KEY
         sync: false
       - key: TWILIO_ACCOUNT_SID
@@ -45,8 +27,13 @@ services:
         value: info
     healthCheckPath: /twilio/health
 
-# Note: After deployment, you'll need to:
-# 1. Set up environment variables in Render dashboard
-# 2. Update PUBLIC_DOMAIN to point to your Render URL
-# 3. Configure Cloudflare Tunnel or similar for webhook routing
-# 4. Both services need to be accessible from a single domain for proper operation
+# Architecture Note:
+# This deployment uses a built-in reverse proxy (server/proxy.ts) that:
+# 1. Listens on the PORT environment variable (set by Render)
+# 2. Starts both the UI server (port 3000) and Twilio server (port 5050) internally
+# 3. Routes requests: /twilio/* → port 5050, everything else → port 3000
+#
+# After deployment:
+# 1. Set environment variables in Render dashboard
+# 2. Update PUBLIC_DOMAIN to your Render URL (e.g., https://your-app.onrender.com)
+# 3. Test the deployment by visiting your URL

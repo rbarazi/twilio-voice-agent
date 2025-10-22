@@ -2,6 +2,20 @@
 
 This guide covers deploying the Twilio Voice Agent to various cloud platforms. Choose the platform that best fits your needs.
 
+## Architecture Overview
+
+**Important**: This application uses a two-server architecture:
+- **Next.js UI** - Runs on port 3000 (user interface)
+- **Twilio Server** - Runs on port 5050 (webhooks and media streaming)
+
+For production deployment, we include a **built-in reverse proxy** (`server/proxy.ts`) that:
+1. Listens on a single port (required by most platforms)
+2. Automatically starts both servers internally
+3. Routes traffic: `/twilio/*` → port 5050, everything else → port 3000
+4. Handles both HTTP and WebSocket connections
+
+This means you get a single deployment URL that works for everything - no need for separate services or complex routing configuration!
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
@@ -232,11 +246,19 @@ heroku open
 **Pros:** Full control, best security, no vendor lock-in
 **Cons:** Requires infrastructure management
 
+#### Two Deployment Options
+
+**Option A: Built-in Reverse Proxy (Simpler)**
+Uses the included reverse proxy - just expose one port with SSL.
+
+**Option B: Cloudflare Tunnel (More flexible)**
+Uses Cloudflare Tunnel for routing - better for development and complex setups.
+
 #### Requirements
 
 - Node.js 18+ installed
 - Public HTTPS domain (required for Twilio webhooks)
-- Reverse proxy (nginx, Caddy, or Cloudflare Tunnel)
+- SSL certificate (Option A) OR Cloudflare Tunnel (Option B)
 
 #### Setup
 
@@ -267,15 +289,75 @@ heroku open
    LOG_LEVEL=info
    ```
 
-5. **Build and start**
+5. **Build the UI**
    ```bash
    npm run build
+   ```
+
+6. **Choose deployment option**
+
+   **Option A: Built-in Reverse Proxy (Recommended for Production)**
+
+   The app includes a reverse proxy that handles routing automatically.
+
+   ```bash
+   # Start with the built-in proxy
    npm run start
    ```
 
-6. **Set up reverse proxy** (see [Cloudflare Tunnel Guide](./CLOUDFLARE_TUNNEL_SETUP.md))
+   Then configure your SSL termination (nginx, Caddy, etc.) to proxy HTTPS traffic to the app's port.
+
+   Example nginx config:
+   ```nginx
+   server {
+       listen 443 ssl;
+       server_name your-domain.com;
+
+       ssl_certificate /path/to/cert.pem;
+       ssl_certificate_key /path/to/key.pem;
+
+       location / {
+           proxy_pass http://localhost:8080;  # or your PORT
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+   ```
+
+   **Option B: Cloudflare Tunnel (Recommended for Development/Flexibility)**
+
+   Run servers separately and use Cloudflare Tunnel for routing:
+
+   ```bash
+   # Start servers individually
+   npm run start:local
+   ```
+
+   Then configure Cloudflare Tunnel (see [Cloudflare Tunnel Guide](./CLOUDFLARE_TUNNEL_SETUP.md)):
+   ```yaml
+   ingress:
+     - hostname: your-domain.com
+       path: /twilio/*
+       service: http://localhost:5050
+     - hostname: your-domain.com
+       service: http://localhost:3000
+     - service: http_status:404
+   ```
 
 7. **Set up process manager** (recommended: PM2)
+
+   **For Option A (Built-in Proxy):**
+   ```bash
+   npm install -g pm2
+   pm2 start npm --name "voice-agent" -- run start
+   pm2 save
+   pm2 startup  # Follow instructions
+   ```
+
+   **For Option B (Cloudflare Tunnel):**
    ```bash
    npm install -g pm2
    pm2 start npm --name "voice-agent-ui" -- run ui:start
@@ -302,9 +384,14 @@ heroku open
    - Visit `https://your-domain.com/api/models`
    - Should return available OpenAI models
 
-### Configure Cloudflare Tunnel (if needed)
+### Configure Cloudflare Tunnel (for local development)
 
-Many deployment platforms provide a single URL. Since this app has two servers (UI on port 3000, Twilio server on port 5050), you may need to configure routing:
+**When is this needed?**
+- ✅ **Local development** - Twilio requires HTTPS webhooks, Cloudflare Tunnel provides this
+- ✅ **Self-hosted Option B** - If you prefer Cloudflare Tunnel over nginx/SSL
+- ❌ **Not needed for Render/Railway/Heroku** - They use the built-in reverse proxy
+
+The built-in reverse proxy (`server/proxy.ts`) handles routing in production deployments. For local development, use Cloudflare Tunnel to expose your local servers with HTTPS.
 
 See [CLOUDFLARE_TUNNEL_SETUP.md](./CLOUDFLARE_TUNNEL_SETUP.md) for detailed instructions.
 

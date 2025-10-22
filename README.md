@@ -88,6 +88,25 @@ npm run ui:dev
 npm run server:dev
 ```
 
+5. **Set up public HTTPS access** (required for Twilio webhooks)
+
+Since Twilio requires HTTPS webhooks, you need to expose your local server. Use Cloudflare Tunnel:
+
+```bash
+# Install Cloudflare Tunnel
+brew install cloudflare/cloudflare/cloudflared  # macOS
+# or download from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+
+# Configure tunnel with ingress rules
+# See docs/CLOUDFLARE_TUNNEL_SETUP.md for detailed setup
+```
+
+**Important**: The tunnel must route:
+- `/twilio/*` → `localhost:5050` (Twilio Server)
+- `/*` → `localhost:3000` (Next.js UI)
+
+See [docs/CLOUDFLARE_TUNNEL_SETUP.md](docs/CLOUDFLARE_TUNNEL_SETUP.md) for complete setup instructions.
+
 ### Production Deployment
 
 Ready to deploy to the cloud? We support multiple platforms:

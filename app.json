@@ -1,6 +1,6 @@
 {
   "name": "Twilio Voice Agent",
-  "description": "AI-powered voice agent system using Twilio and OpenAI Realtime API for phone-based conversations",
+  "description": "AI-powered voice agent system using Twilio and OpenAI Realtime API for phone-based conversations. Uses built-in reverse proxy to route traffic to UI (port 3000) and Twilio server (port 5050) from a single port.",
   "repository": "https://github.com/rbarazi/twilio-voice-agent",
   "logo": "https://openai.com/favicon.ico",
   "keywords": [
@@ -46,10 +46,6 @@
     "NODE_ENV": {
       "description": "Node environment",
       "value": "production"
-    },
-    "TWILIO_SERVER_PORT": {
-      "description": "Port for Twilio server",
-      "value": "5050"
     }
   },
   "formation": {
@@ -59,6 +55,7 @@
   },
   "stack": "heroku-22",
   "scripts": {
-    "postdeploy": "echo 'Deployment complete! Configure your environment variables and set PUBLIC_DOMAIN to your Heroku app URL.'"
-  }
+    "postdeploy": "echo 'Deployment complete! Set PUBLIC_DOMAIN to your Heroku app URL (e.g., https://your-app.herokuapp.com) in Config Vars.'"
+  },
+  "notes": "This app uses a built-in reverse proxy (server/proxy.ts) to route traffic from a single port. It automatically starts both the UI server (internal port 3000) and Twilio server (internal port 5050) and routes requests appropriately: /twilio/* → Twilio server, everything else → UI."
 }
