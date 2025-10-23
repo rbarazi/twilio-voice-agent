@@ -94,8 +94,12 @@ For Twilio to reach your server, you need HTTPS. Choose one:
 
 ### Option A: Cloudflare Tunnel (Recommended)
 
-1. Install cloudflared:
+1. Install cloudflared (if not using devcontainer):
    ```bash
+   # If using the devcontainer, cloudflared is pre-installed ✓
+   # Skip to step 2!
+
+   # Otherwise, install manually:
    # macOS
    brew install cloudflare/cloudflare/cloudflared
 

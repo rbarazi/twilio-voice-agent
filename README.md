@@ -93,8 +93,9 @@ npm run server:dev
 Since Twilio requires HTTPS webhooks, you need to expose your local server. Use Cloudflare Tunnel:
 
 ```bash
-# Install Cloudflare Tunnel
-brew install cloudflare/cloudflare/cloudflared  # macOS
+# If using the devcontainer, cloudflared is pre-installed ✓
+# Otherwise, install it:
+# macOS: brew install cloudflare/cloudflare/cloudflared
 # or download from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
 
 # Configure tunnel with ingress rules
