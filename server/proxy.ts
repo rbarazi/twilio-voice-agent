@@ -8,20 +8,39 @@ import http from 'http';
 import httpProxy from 'http-proxy';
 import { spawn } from 'child_process';
 
-const PORT = process.env.PORT || 8080;
-const UI_PORT = 3000;
-const TWILIO_PORT = 5050;
+// Parse and validate environment variables
+const PORT = parseInt(process.env.PORT || '8080', 10);
+const UI_PORT = parseInt(process.env.UI_PORT || '3000', 10);
+const TWILIO_PORT = parseInt(process.env.TWILIO_SERVER_PORT || '5050', 10);
+
+if (isNaN(PORT) || PORT < 1 || PORT > 65535) {
+  console.error(`Invalid PORT: ${process.env.PORT}. Must be between 1-65535.`);
+  process.exit(1);
+}
 
 // Create proxy server
 const proxy = httpProxy.createProxyServer({});
 
 // Error handling
 proxy.on('error', (err, req, res) => {
-  console.error('Proxy error:', err);
+  const target = req.url?.startsWith('/twilio/') ? 'Twilio server' : 'UI server';
+  const targetPort = req.url?.startsWith('/twilio/') ? TWILIO_PORT : UI_PORT;
+  console.error(`Proxy error (${target} on port ${targetPort}):`, err.message);
+
   if (!res.headersSent) {
-    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.writeHead(502, {
+      'Content-Type': 'application/json',
+      'X-Proxy-Error': target
+    });
+    res.end(JSON.stringify({
+      error: 'Service temporarily unavailable',
+      target,
+      port: targetPort,
+      message: 'Backend service is not responding. Please try again in a moment.'
+    }));
+  } else {
+    res.end();
   }
-  res.end('Proxy error');
 });
 
 // Create HTTP server
@@ -60,6 +79,33 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
+/**
+ * Wait for a server to be healthy before proceeding
+ */
+async function waitForServer(port: number, name: string, healthPath: string = '/health', maxAttempts: number = 30): Promise<void> {
+  console.log(`Waiting for ${name} on port ${port}...`);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`http://localhost:${port}${healthPath}`, {
+        signal: AbortSignal.timeout(1000)
+      });
+
+      if (response.ok) {
+        console.log(`✓ ${name} is ready (attempt ${attempt}/${maxAttempts})`);
+        return;
+      }
+    } catch (error) {
+      // Server not ready yet, will retry
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
+  throw new Error(`${name} failed to start after ${maxAttempts} attempts`);
+}
+
 // Start both backend servers
 console.log('Starting backend servers...');
 
@@ -75,15 +121,57 @@ const twilioServer = spawn('npm', ['run', 'server:start'], {
   env: { ...process.env, TWILIO_SERVER_PORT: String(TWILIO_PORT) }
 });
 
-// Wait for servers to start (give them a few seconds)
-setTimeout(() => {
-  // Start reverse proxy
-  server.listen(PORT, () => {
-    console.log(`\n✓ Reverse proxy listening on port ${PORT}`);
-    console.log(`  - Routing /twilio/* → localhost:${TWILIO_PORT}`);
-    console.log(`  - Routing /* → localhost:${UI_PORT}\n`);
+// Handle child process errors
+uiServer.on('error', (err) => {
+  console.error('Failed to start UI server:', err);
+  process.exit(1);
+});
+
+uiServer.on('exit', (code, signal) => {
+  if (code !== 0 && code !== null) {
+    console.error(`UI server exited with code ${code}`);
+    process.exit(1);
+  }
+  if (signal) {
+    console.log(`UI server killed with signal ${signal}`);
+  }
+});
+
+twilioServer.on('error', (err) => {
+  console.error('Failed to start Twilio server:', err);
+  process.exit(1);
+});
+
+twilioServer.on('exit', (code, signal) => {
+  if (code !== 0 && code !== null) {
+    console.error(`Twilio server exited with code ${code}`);
+    process.exit(1);
+  }
+  if (signal) {
+    console.log(`Twilio server killed with signal ${signal}`);
+  }
+});
+
+// Wait for both servers to be healthy, then start proxy
+Promise.all([
+  waitForServer(UI_PORT, 'UI server', '/', 60), // Next.js may take longer to start
+  waitForServer(TWILIO_PORT, 'Twilio server', '/twilio/health')
+])
+  .then(() => {
+    // Start reverse proxy
+    server.listen(PORT, () => {
+      console.log(`\n✓ Reverse proxy listening on port ${PORT}`);
+      console.log(`  - Routing /twilio/* → localhost:${TWILIO_PORT}`);
+      console.log(`  - Routing /* → localhost:${UI_PORT}\n`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to start servers:', err);
+    console.error('Shutting down...');
+    uiServer.kill();
+    twilioServer.kill();
+    process.exit(1);
   });
-}, 5000);
 
 // Cleanup on exit
 process.on('SIGTERM', () => {
