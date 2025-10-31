@@ -11,10 +11,18 @@ export interface AgentConfig {
   model?: string;
 }
 
+export interface UserCredentials {
+  openaiApiKey?: string;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+}
+
 export interface OutboundCallRequest {
   to: string;
   task: OutboundTask;
   agentConfig?: AgentConfig;
+  userCredentials?: UserCredentials;
 }
 
 export interface OutboundCallResponse {
@@ -31,6 +39,7 @@ export interface CallMetadata {
   to: string;
   task: OutboundTask;
   agentConfig?: AgentConfig;
+  userCredentials?: UserCredentials;
   startedAt: Date;
   status: 'initiated' | 'in-progress' | 'completed' | 'failed';
 }

@@ -11,7 +11,8 @@
     "ui:start": "cd ui && next start",
     "server:start": "bash scripts/run-server-start.sh",
     "build": "npm run ui:build",
-    "start": "concurrently \"npm run ui:start\" \"npm run server:start\"",
+    "start": "tsx server/proxy.ts",
+    "start:local": "concurrently \"npm run ui:start\" \"npm run server:start\"",
     "call": "bash scripts/call.sh",
     "call:reminder": "bash scripts/call-reminder.sh",
     "call:survey": "bash scripts/call-survey.sh"
@@ -25,6 +26,7 @@
     "concurrently": "^9.2.1",
     "dotenv": "^16.4.7",
     "fastify": "^5.6.1",
+    "http-proxy": "^1.18.1",
     "next": "^15.3.1",
     "openai": "^4.77.3",
     "react": "^19.0.0",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/http-proxy": "^1.17.15",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
